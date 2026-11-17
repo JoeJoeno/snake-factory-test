@@ -1,5 +1,5 @@
 """Tests for the terminal snake game."""
-from snake import Board, Snake, GameOver
+from snake import Board, Snake, GameOver, play
 
 
 def test_snake_steps_forward():
@@ -128,16 +128,18 @@ def test_status_line_pause_indicator():
     assert "paused" not in line
 
 
-def test_quit_while_paused_still_breaks_loop():
-    b = Board(w=12, h=6)
-    b.paused = True
-    b.over = False
-    # The play() loop condition must stay live while paused...
-    assert not b.over
-    # ...and a subsequent q (read_key returns "q") breaks it.
-    key = "q"
-    assert key in ("q", "")
-    assert not b.over  # loop would still be alive for that key press
+def test_play_loop_pauses_and_q_quits(capsys, monkeypatch):
+    # Drive the real play() loop over the key sequence p, p, q:
+    # pause, resume (no tick on either toggle press), then quit.
+    keys = iter(["p", "p", "q"])
+    monkeypatch.setattr("snake.read_key", lambda: next(keys))
+    play()
+    out = capsys.readouterr().out
+    # PAUSED banner appears after the pause press, is gone after resume,
+    # and q while the loop is still live ends the run with "quit".
+    assert "PAUSED" in out
+    assert out.rindex("PAUSED") < out.rindex("score=0 len="), "banner stays until resume"
+    assert out.rstrip().endswith("quit")
 
 
 def test_render_contains_food_and_body():
