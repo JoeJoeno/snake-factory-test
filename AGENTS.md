@@ -2,7 +2,8 @@
 
 A tiny terminal snake game in Python. The board is a fixed-size grid drawn
 with plain-text blocks in the terminal; the snake grows as it eats food, and
-the game ends on wall or self collision.
+the game ends on wall or self collision — or in a win when the snake reaches
+length 10.
 
 ## Files
 

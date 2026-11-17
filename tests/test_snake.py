@@ -1,5 +1,5 @@
 """Tests for the terminal snake game."""
-from snake import Board, Snake, GameOver
+from snake import Board, Snake, GameOver, Won
 
 
 def test_snake_steps_forward():
@@ -69,6 +69,33 @@ def test_board_eating_food_grows_and_scores():
     b.tick()
     assert b.score == 1
     assert len(b.snake) == before + 1, "snake should have grown"
+
+
+def test_board_reaching_win_length_wins():
+    b = Board(w=20, h=10)
+    # Length-9 snake; food one cell ahead, so this tick grows it to 10.
+    b.snake = Snake((5, 5), (1, 0))
+    b.snake.body = [(i, 5) for i in range(5, 14)]
+    b.food = (14, 5)
+    try:
+        b.tick()
+        assert b.won, "expected win flag after reaching win length"
+    except Won as e:
+        assert e.args == ("win",)
+    assert len(b.snake) == 10
+    assert b.won
+    assert b.over
+    assert b.score == 1
+
+    # A length-9 snake that does not eat keeps playing.
+    b2 = Board(w=20, h=10)
+    b2.snake = Snake((5, 5), (1, 0))
+    b2.snake.body = [(i, 5) for i in range(5, 14)]
+    b2.food = (19, 0)  # out of the way
+    b2.tick()
+    assert not b2.won
+    assert not b2.over
+    assert len(b2.snake) == 9
 
 
 def test_board_spawn_food_avoids_snake():

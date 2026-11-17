@@ -1,8 +1,8 @@
 """Terminal snake game.
 
 Board is a fixed WxH grid. Snake grows as it eats food. Game over on wall or
-self collision. The renderer also works when stdout is a pipe (no TTY
-required) so tests can capture it.
+self collision; the snake wins at length 10. The renderer also works when
+stdout is a pipe (no TTY required) so tests can capture it.
 
 Run:  python snake.py            (interactive, needs a TTY)
 """
@@ -15,6 +15,7 @@ import time
 
 W, H = 30, 12          # board dimensions
 STEP_SECONDS = 0.10    # per-tick delay
+WIN_LENGTH = 10        # snake length that wins the game
 EMPTY = " "
 BODY = "#"
 FOOD = "*"
@@ -33,6 +34,10 @@ ARROWS = {
 
 class GameOver(Exception):
     """Raised when the snake hits a wall or itself."""
+
+
+class Won(Exception):
+    """Raised when the snake reaches the win length."""
 
 
 class Snake:
@@ -82,6 +87,7 @@ class Board:
         self.food: tuple[int, int] = (0, 0)
         self.score = 0
         self.over = False
+        self.won = False
         self._rng = random.Random()
         self.spawn_food()
 
@@ -121,6 +127,10 @@ class Board:
             self.snake.body.pop(0)
         else:
             self.snake._keep_tail = False
+        if len(self.snake) >= WIN_LENGTH:
+            self.over = True
+            self.won = True
+            raise Won("win")
 
     def render(self) -> str:
         grid = [
@@ -136,7 +146,10 @@ class Board:
         for row in grid:
             lines.append("|" + "".join(row) + "|")
         lines.append("+" + "-" * self.w + "+")
-        lines.append(f"score={self.score} len={len(self.snake)}")
+        status = f"score={self.score} len={len(self.snake)}"
+        if self.won:
+            status += " won"
+        lines.append(status)
         return "\n".join(lines)
 
 
@@ -167,11 +180,16 @@ def play() -> None:
         board.handle_key(key)
         try:
             board.tick()
-        except GameOver as e:
+        except (GameOver, Won):
             break
         print()
         print(board.render())
-    print("game over" if board.over else "quit")
+    if board.won:
+        print("you won")
+    elif board.over:
+        print("game over")
+    else:
+        print("quit")
 
 
 if __name__ == "__main__":
