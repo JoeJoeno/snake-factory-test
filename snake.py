@@ -15,6 +15,9 @@ import time
 
 W, H = 30, 12          # board dimensions
 STEP_SECONDS = 0.10    # per-tick delay
+SPEED_MIN = 0.03       # fastest allowed tick delay
+SPEED_MAX = 0.25       # slowest allowed tick delay
+SPEED_STEP = 0.01      # per-press change to tick delay
 EMPTY = " "
 BODY = "#"
 FOOD = "*"
@@ -82,6 +85,7 @@ class Board:
         self.food: tuple[int, int] = (0, 0)
         self.score = 0
         self.over = False
+        self.step_seconds = STEP_SECONDS
         self._rng = random.Random()
         self.spawn_food()
 
@@ -100,6 +104,14 @@ class Board:
     def handle_key(self, key: str) -> None:
         if key in ARROWS:
             self.snake.turn(ARROWS[key])
+        elif key == "UP":
+            self.set_speed(self.step_seconds - SPEED_STEP)
+        elif key == "DOWN":
+            self.set_speed(self.step_seconds + SPEED_STEP)
+
+    def set_speed(self, seconds: float) -> None:
+        # Round to 2 decimals: 0.01-step float math would otherwise drift.
+        self.step_seconds = round(min(max(seconds, SPEED_MIN), SPEED_MAX), 2)
 
     def tick(self) -> None:
         if self.over:
@@ -136,7 +148,7 @@ class Board:
         for row in grid:
             lines.append("|" + "".join(row) + "|")
         lines.append("+" + "-" * self.w + "+")
-        lines.append(f"score={self.score} len={len(self.snake)}")
+        lines.append(f"score={self.score} len={len(self.snake)} speed={self.step_seconds:.2f}s")
         return "\n".join(lines)
 
 
@@ -149,6 +161,14 @@ def read_key() -> str:
     if sys.stdin.isatty():
         os.system("stty raw -echo")
         ch = sys.stdin.read(1)
+        # Arrow keys arrive as CSI escape sequences: ESC [ <code>.
+        if ch == "\x1b":
+            ch += sys.stdin.read(2)
+            if ch == "\x1b[A":
+                return "UP"
+            if ch == "\x1b[B":
+                return "DOWN"
+            # Left/right arrows fall through and are ignored; h/l handle them.
         os.system("stty -raw echo")
         if ch in ("q", "\x03", ""):
             sys.exit(0)
@@ -169,6 +189,7 @@ def play() -> None:
             board.tick()
         except GameOver as e:
             break
+        time.sleep(board.step_seconds)
         print()
         print(board.render())
     print("game over" if board.over else "quit")
