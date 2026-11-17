@@ -1,5 +1,5 @@
 """Tests for the terminal snake game."""
-from snake import Board, Snake, GameOver
+from snake import Board, Snake, GameOver, play
 
 
 def test_snake_steps_forward():
@@ -77,6 +77,69 @@ def test_board_spawn_food_avoids_snake():
     b.spawn_food()
     assert b.food not in b.snake.body
     assert 0 <= b.food[0] < 8 and 0 <= b.food[1] < 6
+
+
+def test_pausing_freezes_state():
+    b = Board(w=12, h=6)
+    head, body, food, score = (
+        b.snake.head(),
+        list(b.snake.body),
+        b.food,
+        b.score,
+    )
+    b.paused = True
+    b.tick()
+    assert b.snake.head() == head
+    assert b.snake.body == body
+    assert b.food == food
+    assert b.score == score
+    assert b.snake.direction == (1, 0)
+
+
+def test_resuming_resumes_stepping():
+    b = Board(w=12, h=6)
+    head, body = b.snake.head(), list(b.snake.body)
+    b.paused = True
+    b.tick()  # no-op
+    assert b.snake.head() == head
+    b.paused = False
+    b.tick()
+    assert b.snake.head() != head
+    assert len(b.snake.body) == len(body), "tail cell dropped"
+
+
+def test_render_shows_paused_banner_only_when_paused():
+    b = Board(w=12, h=6)
+    b.paused = True
+    assert "PAUSED" in b.render()
+    b.paused = False
+    assert "PAUSED" not in b.render()
+
+
+def test_status_line_pause_indicator():
+    b = Board(w=12, h=6)
+    b.score = 3
+    b.paused = True
+    line = b.render().splitlines()[-1]
+    assert line == f"score={b.score} len={len(b.snake)} paused"
+    b.paused = False
+    line = b.render().splitlines()[-1]
+    assert line == f"score={b.score} len={len(b.snake)}"
+    assert "paused" not in line
+
+
+def test_play_loop_pauses_and_q_quits(capsys, monkeypatch):
+    # Drive the real play() loop over the key sequence p, p, q:
+    # pause, resume (no tick on either toggle press), then quit.
+    keys = iter(["p", "p", "q"])
+    monkeypatch.setattr("snake.read_key", lambda: next(keys))
+    play()
+    out = capsys.readouterr().out
+    # PAUSED banner appears after the pause press, is gone after resume,
+    # and q while the loop is still live ends the run with "quit".
+    assert "PAUSED" in out
+    assert out.rindex("PAUSED") < out.rindex("score=0 len="), "banner stays until resume"
+    assert out.rstrip().endswith("quit")
 
 
 def test_render_contains_food_and_body():

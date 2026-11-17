@@ -82,6 +82,7 @@ class Board:
         self.food: tuple[int, int] = (0, 0)
         self.score = 0
         self.over = False
+        self.paused = False
         self._rng = random.Random()
         self.spawn_food()
 
@@ -102,7 +103,7 @@ class Board:
             self.snake.turn(ARROWS[key])
 
     def tick(self) -> None:
-        if self.over:
+        if self.over or self.paused:
             return
         self.snake.step()
         hx, hy = self.snake.head()
@@ -136,7 +137,12 @@ class Board:
         for row in grid:
             lines.append("|" + "".join(row) + "|")
         lines.append("+" + "-" * self.w + "+")
-        lines.append(f"score={self.score} len={len(self.snake)}")
+        if self.paused:
+            lines.append("PAUSED")
+        status = f"score={self.score} len={len(self.snake)}"
+        if self.paused:
+            status += " paused"
+        lines.append(status)
         return "\n".join(lines)
 
 
@@ -164,6 +170,11 @@ def play() -> None:
         key = read_key()
         if key in ("q", ""):
             break
+        if key in ("p", "P"):
+            board.paused = not board.paused
+            print()
+            print(board.render())
+            continue
         board.handle_key(key)
         try:
             board.tick()
