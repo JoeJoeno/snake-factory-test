@@ -150,7 +150,7 @@ def read_key() -> str:
         os.system("stty raw -echo")
         ch = sys.stdin.read(1)
         os.system("stty -raw echo")
-        if ch in ("q", "\x03", ""):
+        if ch in ("q", "Q", "\x03", ""):
             sys.exit(0)
         return ch
     line = sys.stdin.readline()
@@ -162,7 +162,7 @@ def play() -> None:
     print(board.render())
     while not board.over:
         key = read_key()
-        if key in ("q", ""):
+        if key in ("q", "Q", ""):
             break
         board.handle_key(key)
         try:
@@ -171,7 +171,10 @@ def play() -> None:
             break
         print()
         print(board.render())
-    print("game over" if board.over else "quit")
+    if board.over:
+        print("game over")
+    else:
+        print(f"quit: score={board.score}")
 
 
 if __name__ == "__main__":
