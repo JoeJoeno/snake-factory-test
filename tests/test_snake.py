@@ -1,4 +1,10 @@
 """Tests for the terminal snake game."""
+import contextlib
+import io
+import subprocess
+import sys
+
+import snake
 from snake import Board, Snake, GameOver
 
 
@@ -85,3 +91,37 @@ def test_render_contains_food_and_body():
     assert "*" in out, "food marker should render"
     assert "#" in out, "body marker should render"
     # Render must work under a pipe (no TTY) — we just called it here.
+
+
+def test_quit_with_lowercase_q_prints_final_score_and_exits_zero():
+    result = subprocess.run(
+        [sys.executable, "snake.py"],
+        input="q\n",
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert result.stdout.splitlines()[-1].startswith("quit: score=")
+
+
+def test_quit_with_uppercase_q_prints_final_score_and_exits_zero():
+    result = subprocess.run(
+        [sys.executable, "snake.py"],
+        input="Q\n",
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert result.stdout.splitlines()[-1].startswith("quit: score=")
+
+
+def test_quit_message_printed_for_non_collision_exit(monkeypatch):
+    board = Board(w=8, h=4)
+    board.snake = Snake((1, 1), (1, 0))
+    board.score = 2
+    monkeypatch.setattr(snake, "Board", lambda: board)
+    monkeypatch.setattr(snake.sys.stdin, "readline", lambda: "q\n")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        snake.play()
+    assert buf.getvalue().splitlines()[-1] == "quit: score=2"
