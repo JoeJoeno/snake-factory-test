@@ -1,4 +1,8 @@
 """Tests for the terminal snake game."""
+import os
+import tempfile
+from io import BytesIO, TextIOWrapper
+
 from snake import Board, Snake, GameOver
 
 
@@ -85,3 +89,22 @@ def test_render_contains_food_and_body():
     assert "*" in out, "food marker should render"
     assert "#" in out, "body marker should render"
     # Render must work under a pipe (no TTY) — we just called it here.
+
+
+def test_no_title_escape_in_piped_output(capsys, monkeypatch):
+    import snake
+    # Play with a real (non-TTY) pipe for stdout and an exhausted pipe for
+    # stdin so read_key() returns "" and play() quits immediately. Any
+    # title escape would be written to the pipe; a TTY would be.
+    pipe = tempfile.TemporaryFile("w+b")
+    pipe_fd = pipe.fileno()
+    monkeypatch.setattr(snake.sys, "stdout", os.fdopen(pipe_fd, "w", buffering=1))
+    monkeypatch.setattr(snake.sys, "stdin", TextIOWrapper(BytesIO(b"")))
+    snake.play()
+    captured = capsys.readouterr()
+    assert "\033]0;" not in captured.out
+    pipe.seek(0)
+    data = pipe.read()
+    assert b"\033]0;" not in data
+    assert b"quit" in data
+    pipe.close()
