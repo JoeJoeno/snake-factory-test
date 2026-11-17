@@ -85,3 +85,7 @@ def test_render_contains_food_and_body():
     assert "*" in out, "food marker should render"
     assert "#" in out, "body marker should render"
     # Render must work under a pipe (no TTY) — we just called it here.
+
+def test_deliberately_failing_repair_check():
+    """This test should fail to trigger the repair cycle."""
+    assert 1 == 2, "Deliberate failure to test repair"
