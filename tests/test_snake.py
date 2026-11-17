@@ -1,5 +1,5 @@
 """Tests for the terminal snake game."""
-from snake import Board, Snake, GameOver
+from snake import Board, Snake, GameOver, STEP_SECONDS, SPEED_MIN, SPEED_MAX
 
 
 def test_snake_steps_forward():
@@ -85,3 +85,56 @@ def test_render_contains_food_and_body():
     assert "*" in out, "food marker should render"
     assert "#" in out, "body marker should render"
     # Render must work under a pipe (no TTY) — we just called it here.
+
+
+def test_default_speed_is_module_constant():
+    b = Board()
+    assert b.step_seconds == 0.10
+    assert b.step_seconds == STEP_SECONDS
+
+
+def test_up_key_decreases_speed_delay():
+    b = Board()
+    b.handle_key("UP")
+    assert b.step_seconds == 0.09
+
+
+def test_down_key_increases_speed_delay():
+    b = Board()
+    b.handle_key("DOWN")
+    assert b.step_seconds == 0.11
+
+
+def test_speed_clamps_at_minimum():
+    b = Board()
+    b.step_seconds = SPEED_MIN
+    b.handle_key("UP")
+    assert b.step_seconds == SPEED_MIN
+
+
+def test_speed_clamps_at_maximum():
+    b = Board()
+    b.step_seconds = SPEED_MAX
+    b.handle_key("DOWN")
+    assert b.step_seconds == SPEED_MAX
+
+
+def test_speed_keys_do_not_turn_snake():
+    b = Board()
+    b.handle_key("UP")
+    b.handle_key("DOWN")
+    assert b.snake.direction == (1, 0)
+    # Movement keys still work.
+    b.handle_key("d")
+    assert b.snake.direction == (1, 0)
+    b.handle_key("w")
+    assert b.snake.direction == (0, -1)
+
+
+def test_render_status_line_shows_current_speed():
+    b = Board(w=12, h=6)
+    assert "speed=0.10s" in b.render()
+    b.handle_key("UP")
+    assert "speed=0.09s" in b.render()
+    b.handle_key("DOWN")
+    assert "speed=0.10s" in b.render()

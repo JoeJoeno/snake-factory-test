@@ -24,4 +24,12 @@ python -m pytest -q          # run the test suite
 python snake.py              # play (interactive, needs a TTY)
 ```
 
+## Controls
+
+- Movement: `a`/`h` up-left, `s`/`j` down-right, `d`/`l` right, `w`/`k` up.
+- Speed: up/down arrow keys change the tick delay by 0.01s, clamped to
+  [0.03s, 0.25s] (default 0.10s); the current value is shown in the status
+  line.
+- Quit: `q` (or Ctrl-C).
+
 Add tests when you change behaviour; keep the suite green.
