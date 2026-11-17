@@ -157,9 +157,17 @@ def read_key() -> str:
     return line.strip()
 
 
+def set_title(title: str) -> None:
+    """Set the terminal title. No-op when stdout is not a TTY (pipes/tests)."""
+    if sys.stdout.isatty():
+        sys.stdout.write("\033]0;" + title + "\007")
+        sys.stdout.flush()
+
+
 def play() -> None:
     board = Board()
     print(board.render())
+    prev_score = 0
     while not board.over:
         key = read_key()
         if key in ("q", ""):
@@ -169,8 +177,12 @@ def play() -> None:
             board.tick()
         except GameOver as e:
             break
+        if board.score != prev_score:
+            set_title(f"Snake: {board.score}")
+            prev_score = board.score
         print()
         print(board.render())
+    set_title("Snake")
     print("game over" if board.over else "quit")
 
 
