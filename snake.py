@@ -13,6 +13,8 @@ import random
 import sys
 import time
 
+HIGH_SCORE_FILE = "highscore.txt"
+
 W, H = 30, 12          # board dimensions
 STEP_SECONDS = 0.10    # per-tick delay
 EMPTY = " "
@@ -81,6 +83,7 @@ class Board:
         self.snake = Snake((w // 2, h // 2), (1, 0))
         self.food: tuple[int, int] = (0, 0)
         self.score = 0
+        self.high_score = 0
         self.over = False
         self._rng = random.Random()
         self.spawn_food()
@@ -136,8 +139,23 @@ class Board:
         for row in grid:
             lines.append("|" + "".join(row) + "|")
         lines.append("+" + "-" * self.w + "+")
-        lines.append(f"score={self.score} len={len(self.snake)}")
+        lines.append(f"score={self.score} len={len(self.snake)} High: {self.high_score}")
         return "\n".join(lines)
+
+
+def load_high_score(path: str = HIGH_SCORE_FILE) -> int:
+    """Read the stored high score; missing/unreadable/corrupt files mean 0."""
+    try:
+        with open(path) as f:
+            return int(f.read().strip())
+    except (OSError, ValueError):
+        return 0
+
+
+def save_high_score(score: int, path: str = HIGH_SCORE_FILE) -> None:
+    """Write the high score as a single integer line."""
+    with open(path, "w") as f:
+        f.write(f"{score}\n")
 
 
 def read_key() -> str:
@@ -159,6 +177,7 @@ def read_key() -> str:
 
 def play() -> None:
     board = Board()
+    board.high_score = load_high_score()
     print(board.render())
     while not board.over:
         key = read_key()
@@ -171,6 +190,8 @@ def play() -> None:
             break
         print()
         print(board.render())
+    if board.score > board.high_score:
+        save_high_score(board.score)
     print("game over" if board.over else "quit")
 
 

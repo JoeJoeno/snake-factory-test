@@ -1,5 +1,5 @@
 """Tests for the terminal snake game."""
-from snake import Board, Snake, GameOver
+from snake import Board, Snake, GameOver, load_high_score, save_high_score
 
 
 def test_snake_steps_forward():
@@ -85,3 +85,68 @@ def test_render_contains_food_and_body():
     assert "*" in out, "food marker should render"
     assert "#" in out, "body marker should render"
     # Render must work under a pipe (no TTY) — we just called it here.
+
+
+def test_render_status_line_shows_high_score():
+    b = Board(w=12, h=6)
+    b.high_score = 7
+    out = b.render()
+    last = out.splitlines()[-1]
+    assert last == f"score={b.score} len={len(b.snake)} High: 7"
+
+
+def test_render_status_line_defaults_high_score_to_zero():
+    b = Board(w=12, h=6)
+    out = b.render()
+    assert out.splitlines()[-1].endswith(" High: 0")
+
+
+def test_load_high_score_missing_file(tmp_path):
+    assert load_high_score(str(tmp_path / "nope.txt")) == 0
+
+
+def test_load_high_score_valid_file(tmp_path):
+    p = tmp_path / "highscore.txt"
+    p.write_text("42\n")
+    assert load_high_score(str(p)) == 42
+
+
+def test_load_high_score_corrupt_file(tmp_path):
+    p = tmp_path / "highscore.txt"
+    p.write_text("not-a-number")
+    assert load_high_score(str(p)) == 0
+
+
+def test_load_high_score_empty_file(tmp_path):
+    p = tmp_path / "highscore.txt"
+    p.write_text("")
+    assert load_high_score(str(p)) == 0
+
+
+def test_save_only_updates_on_new_high(tmp_path):
+    p = tmp_path / "highscore.txt"
+    p.write_text("10\n")
+    # A lower or equal final score leaves the file unchanged (play() logic).
+    original = p.read_text()
+    for score in (5, 10):
+        if score > load_high_score(str(p)):
+            save_high_score(score, str(p))
+    assert p.read_text() == original
+    # A higher score updates the file.
+    if 11 > load_high_score(str(p)):
+        save_high_score(11, str(p))
+    assert p.read_text() == "11\n"
+
+
+def test_round_trip_persists_across_restart(tmp_path):
+    p = tmp_path / "highscore.txt"
+    # First "session": no file yet, so high score starts at 0.
+    high = load_high_score(str(p))
+    b = Board()
+    b.high_score = high
+    b.score = 3
+    if b.score > b.high_score:
+        save_high_score(b.score, str(p))
+    assert p.read_text() == "3\n"
+    # Second "session": restart must load the persisted high score.
+    assert load_high_score(str(p)) == 3
